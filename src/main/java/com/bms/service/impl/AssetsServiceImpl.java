@@ -36,18 +36,23 @@ public class AssetsServiceImpl implements AssetsServiceAPI {
 	}
 
 	@Override
-	public boolean exists(AssetEntity assetModel ) {
+	public AssetEntity exists(AssetEntity assetModel ) {
 		boolean  flag1,flag2,flag;
 		System.out.println("Inside exists AssetsServiceImpl");
-		//AssetEntity entity=null;
+		AssetEntity entity=assetRepo.findByImeiNoAndOrgId(assetModel.getImeiNo(),assetModel.getOrgId());
 		
-		if(assetRepo.findByImeiNoAndOrgId(assetModel.getImeiNo(),assetModel.getOrgId()) != null)
+		if( entity!= null)
 		{
+			
+			System.out.println("inside asset service impl >> entity :: "+entity.getImeiNo());
 			 System.out.println("TRUE");
-			return true;
+			//return entity;
 		}
+		else {
+			System.out.println("*********88 NULL");
 		System.out.println("FALSE");
-		return false;
+		}
+		return entity;
 		/*
 		 * flag1 = assetRepo.existsByImeiNo(assetModel.getImeiNo()); flag2 =
 		 * assetRepo.existsByOrgId(assetModel.getOrgId());
@@ -62,6 +67,30 @@ public class AssetsServiceImpl implements AssetsServiceAPI {
 	public boolean existsByImeiNo(long imei) {
 		// TODO Auto-generated method stub
 		return assetRepo.existsByImeiNo(imei);
+	}
+
+	@Override
+	public List<String> get_distinct_version_of_bms() {
+		// TODO Auto-generated method stub
+		return assetRepo.get_distinct_version_of_bms();
+	}
+
+	@Override
+	public List<String> get_distinct_version_of_tcu() {
+		// TODO Auto-generated method stub
+		return assetRepo.get_distinct_version_of_tcu();
+	}
+
+	@Override
+	public List<String> get_distinct_version_of_config() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<String> get_distinct_version_of_cisconfg() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	/*

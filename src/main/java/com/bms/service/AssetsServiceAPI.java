@@ -13,8 +13,16 @@ public interface AssetsServiceAPI {
 	
 	public List<AssetEntity> findAllAssets();
 
-	boolean exists(AssetEntity assetModel);
+	AssetEntity exists(AssetEntity assetModel);
 
 	public boolean existsByImeiNo(long imei);
+
+	public List<String> get_distinct_version_of_bms();
+
+	public List<String> get_distinct_version_of_tcu();
+
+	public List<String> get_distinct_version_of_config();
+
+	public List<String> get_distinct_version_of_cisconfg();
 
 }

@@ -82,6 +82,9 @@
 			<artifactId>json</artifactId>
 			<version>20160807</version>
 		</dependency>
+		<dependency><!-- jackson -->
+            <groupId>org.codehaus.jackson</groupId><artifactId>jackson-mapper-asl</artifactId><version>1.4.2</version>
+        </dependency>
 		<!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
 		<dependency>
 			<groupId>com.google.code.gson</groupId>

@@ -9,32 +9,94 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.Table;
 
-//@Table(schema = "public", name = "t_batch_details_log_")
+@Table(schema = "public", name = "t_batch_details_log")
 @Entity
 public class t_batch_details_log {
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
-	private long id;
+	private long s_no;
 	
+	private long batch_id;
+	
+	private long IMEI;
+	
+	private Timestamp time;
+	
+	private String orgName;
+	
+	private String status;
+	
+	private String command;
+	
+	private String response;
+	
+	public long getS_no() {
+		return s_no;
+	}
+
+	public void setS_no(long s_no) {
+		this.s_no = s_no;
+	}
+
+	public long getBatch_id() {
+		return batch_id;
+	}
+   
+	public void setBatch_id(long batch_id) {
+		this.batch_id = batch_id;
+	}
+
+	public long getIMEI() {
+		return IMEI;
+	}
+
+	public void setIMEI(long iMEI) {
+		IMEI = iMEI;
+	}
+
+	public Timestamp getTime() {
+		return time;
+	}
+
+	public void setTime(Timestamp time) {
+		this.time = time;
+	}
+
+	public String getOrgName() {
+		return orgName;
+	}
+
+	public void setOrgName(String orgName) {
+		this.orgName = orgName;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public String getCommand() {
+		return command;
+	}
+
+	public void setCommand(String command) {
+		this.command = command;
+	}
+
+	public String getResponse() {
+		return response;
+	}
+
+	public void setResponse(String response) {
+		this.response = response;
+	}
 	/*
 	 * @JoinColumn(name="batch_id") private t_batch_details t_batch_details;
 	 */
-	private long t_batch_details_id;
-	
-	private String log;
-	
-	public long getT_batch_details_id() {
-		return t_batch_details_id;
-	}
-
-	public void setT_batch_details_id(long t_batch_details_id) {
-		this.t_batch_details_id = t_batch_details_id;
-	}
-
-	private String send_command;
-	
-	private String response;
 	
 	
 
@@ -45,37 +107,9 @@ public class t_batch_details_log {
 	 * this.t_batch_details = t_batch_details; }
 	 */
 
-	public long getId() {
-		return id;
-	}
+	
 
-	public void setId(long id) {
-		this.id = id;
-	}
-
-	public String getLog() {
-		return log;
-	}
-
-	public void setLog(String log) {
-		this.log = log;
-	}
-
-	public String getSend_command() {
-		return send_command;
-	}
-
-	public void setSend_command(String send_command) {
-		this.send_command = send_command;
-	}
-
-	public String getResponse() {
-		return response;
-	}
-
-	public void setResponse(String response) {
-		this.response = response;
-	}
+	
 	
 	
 	
