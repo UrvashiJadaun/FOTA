@@ -31,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.bms.Entity.AssetEntity;
 import com.bms.Entity.OrganisationEntity;
+import com.bms.model.AssetDataSelected;
 import com.bms.model.Batch_Data;
 import com.bms.model.CustomResponse;
 import com.bms.model.Version;
@@ -48,6 +49,8 @@ import com.opencsv.CSVReader;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import com.sun.javafx.collections.MappingChange.Map;
+
+import antlr.collections.impl.LList;
 
 @RestController
 @CrossOrigin(origins = "*")
@@ -116,6 +119,36 @@ public class Controller {
 
 		return assetList;
 	}
+	
+	@PostMapping("/getJson")
+	public String getJson(@RequestBody String json) {
+		
+		  Gson gson = new Gson();
+		  JSONObject jsonObj=new JSONObject(json); 		 
+		  JSONArray jsonArray=jsonObj.getJSONArray("Version1"); 
+		  for (int i=0;i<jsonArray.length();i++)
+		  { 
+			  JSONObject obj=jsonArray.getJSONObject(i);
+			  Version emp = gson.fromJson(json, Version.class);
+			  System.out.println("emp : "+obj);
+		      System.out.println(emp.getTcu());
+		      System.out.println(emp.getTcuVersion());
+		      System.out.println(emp.getBms());
+		      System.out.println(emp.getBmsVersion());
+		      System.out.println(emp.getCfg());
+		      System.out.println(emp.getCfgVersion());
+		  }
+		
+			/*
+			 * JSONObject jsonObj=new JSONObject(json); JSONArray
+			 * jsonArray=jsonObj.getJSONArray("dataArray"); for (int
+			 * i=0;i<jsonArray.length();i++) { JSONObject obj=jsonArray.getJSONObject(i);
+			 * System.out.println(obj.get("d1")); System.out.println(obj.get("d2")); }
+			 * return jsonObj.toString();
+			 */
+		 
+		  return "ok";
+	}
 
 	@PostMapping("/get")
 	public void get(@RequestBody String json) {
@@ -147,6 +180,25 @@ public class Controller {
 		 * System.out.println("Vesion : "+version.getVersion()); }
 		 */
 
+	}
+	
+	@RequestMapping("/get_asset_data/{OrgId}")
+	public List<AssetDataSelected> getAssetDataByOrgId(@PathVariable(name = "OrgId") Integer OrgId)
+	{
+		List<AssetEntity> list1			=	assetsServiceAPI.getAssetDataByOrgId(OrgId);
+		List<AssetDataSelected> list2	=	new ArrayList<AssetDataSelected>();
+		for (AssetEntity assetEntity : list1) {
+			AssetDataSelected obj		=	new AssetDataSelected();
+			obj.setBms(assetEntity.getBms());
+			obj.setBmsConfigurationVersion(assetEntity.getBmsConfigurationVersion());
+			obj.setTcu(assetEntity.getTcu());
+			obj.setImeiNo(assetEntity.getImeiNo());
+			obj.setBin(assetEntity.getBin());
+			list2.add(obj);
+		} 
+		
+		
+		return list2;
 	}
 
 	@RequestMapping("/get_distinct_version/{componentType}")
@@ -204,6 +256,99 @@ public class Controller {
 //			return organisationservice.findOrgDetailsByToken(accessToken);
 //		}
 //	  
+	
+	 @PostMapping("/push-fota-single/{orgId}/{imei}")
+	public ResponseEntity<CustomResponse> push_fota_single(@PathVariable(name = "orgId") Integer orgId,
+			@PathVariable(name = "imei") long imei,
+			@RequestParam("request") String json)
+	{
+		 
+		 String tcu,tcuVersion,bms,bmsVersion,cfg,cfgVersion;
+			tcuVersion=bmsVersion=cfgVersion=null;
+			tcu=bms=cfg=null;
+			
+			 Gson gson = new Gson();
+		      Version ver = gson.fromJson(json, Version.class);
+		      tcu=ver.getTcu();
+		      bms=ver.getBms();
+		      cfg=ver.getCfg();
+		      
+		     if(ver.getTcu()!=null)
+		    	 tcuVersion=ver.getTcuVersion();
+		     if(ver.getBms()!=null)
+		    	 bmsVersion=ver.getBmsVersion();
+		     if(ver.getCfg()!=null)
+		    	 cfgVersion=ver.getCfgVersion();
+		     if(ver.getBms()==null)
+		    	 cfg=null;
+		      
+		     
+			String orgName = organizationServiceAPI.findById(orgId);
+			AssetEntity asset = new AssetEntity();
+			asset.setOrgId(orgId);
+			asset.setImeiNo(imei);
+			AssetEntity assetEntity = assetsServiceAPI.exists(asset);
+			if (assetEntity != null) {
+				
+				System.out.println("asset Entity not null");
+				Batch_Data emei_Batch = new Batch_Data();
+				// bd.setSNo(nextRecord[0]);
+				emei_Batch.setBatch_Name(orgName);
+				emei_Batch.setImei(assetEntity.getImeiNo() + "");
+				emei_Batch.setTcu(assetEntity.getTcu());
+				emei_Batch.setBms(assetEntity.getBms());
+				emei_Batch.setCfg(assetEntity.getBmsConfigurationVersion() + "");
+				if(tcu!=null)
+				{
+					System.out.println("inside tcu");
+					t_batch_details_log log=new t_batch_details_log();
+					String tcuCommand="$TMCFG|START OTA "+tcuVersion+"/#";
+					log.setIMEI(Long.parseLong(emei_Batch.getImei()));
+					log.setOrgName(orgName);
+					log.setResponse("Incoming");
+					log.setStatus("new");
+					log.setTime(new Timestamp(Calendar.getInstance().getTime().getTime()));
+					log.setBatch_id(orgId);
+					log.setCommand(tcuCommand);
+					
+					batchDetailsLogServiceApi.save_tcu_command(log);
+				}
+				if(bms!=null)
+				{
+					System.out.println("inside bms");
+					t_batch_details_log log=new t_batch_details_log();
+					String bmsCommand="$TMCFG|START BMSOTA "+bmsVersion+"/#";
+					log.setIMEI(Long.parseLong(emei_Batch.getImei()));
+					log.setOrgName(orgName);
+					log.setResponse("Incoming");
+					log.setStatus("new");
+					log.setTime(new Timestamp(Calendar.getInstance().getTime().getTime()));
+					log.setBatch_id(orgId);
+					log.setCommand(bmsCommand);
+					
+					batchDetailsLogServiceApi.save_bms_command(log);
+				}
+				if(bms!=null && cfg!=null)
+				{
+					System.out.println("inside cfg");
+					t_batch_details_log log=new t_batch_details_log();
+					String cfgCommand="$TMCFG|START CFGOTA "+cfgVersion+"/#";
+					log.setIMEI(Long.parseLong(emei_Batch.getImei()));
+					log.setOrgName(orgName);
+					log.setResponse("Incoming");
+					log.setStatus("new");
+					log.setTime(new Timestamp(Calendar.getInstance().getTime().getTime()));
+					log.setBatch_id(orgId);
+					log.setCommand(cfgCommand);
+					
+					batchDetailsLogServiceApi.save_cfg_command(log);
+				}
+				
+				
+			}
+		return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(200, "success"));
+		
+	}
 //@RequestBody String json
 //	@PostMapping("/upload-csv-file/{orgId}/{componentType}/{componentVersion}")
   @PostMapping("/upload-csv-file/{orgId}")

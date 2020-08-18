@@ -93,6 +93,14 @@ public class AssetsServiceImpl implements AssetsServiceAPI {
 		return null;
 	}
 
+	@Override
+	public List<AssetEntity> getAssetDataByOrgId(Integer orgId) {
+
+		//return assetRepo.getAssetDataByOrgId(orgId);
+		return assetRepo.findByOrgId(orgId);
+		
+	}
+
 	/*
 	 * @Override public List<AssetEntity> findAllAssets() {
 	 * System.out.println("Inside AssetsServiceImpl"); return assetRepo.findAll(); }

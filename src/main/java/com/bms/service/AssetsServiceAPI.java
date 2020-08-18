@@ -25,4 +25,6 @@ public interface AssetsServiceAPI {
 
 	public List<String> get_distinct_version_of_cisconfg();
 
+	public List<AssetEntity> getAssetDataByOrgId(Integer orgId);
+
 }
