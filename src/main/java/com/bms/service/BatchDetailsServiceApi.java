@@ -17,4 +17,6 @@ public interface BatchDetailsServiceApi {
 	
 	public Boolean existsByImeiNo(long imei);
 
+	//public int deleteByBatch_id(Long batch_id);
+
 }

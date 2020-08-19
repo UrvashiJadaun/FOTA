@@ -15,4 +15,6 @@ public interface BatchServiceApi {
 	public  Long getMaxId();
 
 	public List<t_batch> findAll();
+
+	//public int deleteByBatch_id(Long batch_id);
 }

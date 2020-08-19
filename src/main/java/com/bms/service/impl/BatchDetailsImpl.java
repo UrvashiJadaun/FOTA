@@ -35,5 +35,9 @@ public class BatchDetailsImpl implements BatchDetailsServiceApi{
 		// TODO Auto-generated method stub
 		return batch_detailsRepo.existsByIMEI(imei);
 	}
+	/*
+	 * @Override public int deleteByBatch_id(Long batch_id) { // TODO Auto-generated
+	 * method stub return batch_detailsRepo.deleteByBatch_id(batch_id); }
+	 */
 
 }

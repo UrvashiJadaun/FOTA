@@ -19,12 +19,22 @@ public class t_batch_details_log {
 	
 	private long batch_id;
 	
+	private String type;
+	
 	private long IMEI;
 	
 	private Timestamp time;
 	
 	private String orgName;
 	
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
 	private String status;
 	
 	private String command;

@@ -19,5 +19,7 @@ public interface Batch_detailsRepo extends JpaRepository<t_batch_details, Long>{
 	 	
 	 	public Boolean existsByIMEI(long imei);
 
+		//int deleteByBatch_id(Long batch_id);
+
 
 }

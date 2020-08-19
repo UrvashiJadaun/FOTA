@@ -9,12 +9,12 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
-@Table(schema = "public", name = "t_batchh")
+@Table(schema = "public", name = "t_batch_")
 @Entity
 public class t_batch {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE)
 	private long batch_id;
 	
 	private String usr;
@@ -22,14 +22,6 @@ public class t_batch {
 	
 	private String batch_org_name;
 	
-	public String getUsr() {
-		return usr;
-	}
-
-	public void setUsr(String usr) {
-		this.usr = usr;
-	}
-
 	private long count;
 	
 	private Timestamp start_date;
@@ -49,6 +41,13 @@ public class t_batch {
 	 * 
 	 * public void setUser(String user) { this.user = user; }
 	 */
+	public String getUsr() {
+		return usr;
+	}
+
+	public void setUsr(String usr) {
+		this.usr = usr;
+	}
 	
 	public long getBatch_id() {
 		return batch_id;

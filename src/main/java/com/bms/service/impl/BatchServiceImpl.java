@@ -35,5 +35,12 @@ public class BatchServiceImpl implements BatchServiceApi{
         		
 	}
 
+	/*
+	 * @Override public int deleteByBatch_id(Long batch_id) { // TODO Auto-generated
+	 * method stub return batchRepo.deleteByBatch_id(batch_id);
+	 * 
+	 * }
+	 */
+
 
 }
