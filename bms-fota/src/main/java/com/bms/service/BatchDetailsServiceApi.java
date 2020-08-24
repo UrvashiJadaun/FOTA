@@ -23,6 +23,8 @@ public interface BatchDetailsServiceApi {
 
 	public int deleteByIMEI(Long imei);
 
+	public void update_records(t_batch_details t_batch_details);
+
 
 
 	//public int deleteByBatch_id(Long batch_id);

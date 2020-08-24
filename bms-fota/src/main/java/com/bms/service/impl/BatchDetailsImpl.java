@@ -64,6 +64,13 @@ public class BatchDetailsImpl implements BatchDetailsServiceApi{
 		// TODO Auto-generated method stub
 		return batch_detailsRepo.deleteByIMEI(imei);
 	}
+	@Override
+	public void update_records(t_batch_details t_batch_details) {
+		// TODO Auto-generated method stub
+		t_batch_details.setStatus("done");
+		batch_detailsRepo.save(t_batch_details);
+		
+	}
 
 
 }

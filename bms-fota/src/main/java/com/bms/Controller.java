@@ -38,6 +38,7 @@ import com.bms.model.Batch_Data;
 import com.bms.model.CustomResponse;
 import com.bms.model.LogStatus;
 import com.bms.model.Version;
+import com.bms.model.Versionn;
 import com.bms.model.t_batch;
 import com.bms.model.t_batch_details;
 import com.bms.model.t_batch_details_log;
@@ -113,9 +114,75 @@ public class Controller {
 	}
 
 	
+	
+	@GetMapping("/batch_imei_run/{batchid}")
+	public ResponseEntity<CustomResponse> batch_IMEI_run(@PathVariable(name = "batchid") Long batchid)
+	{
+		boolean flag = true;
+		try {
+		t_batch batch		 =	batchServiceApi.findByBatchid(batchid);
+		if(batch==null)
+			System.out.println("batch is  null");
+		String orgName		 = 	batch.getBatch_org_name();
+		List<t_batch_details> imeiList = batchDetailsServiceApi.findAllByBatch_id(batchid);
+		String tcuCommand="";
+		String bmsCommand="";
+		String cfgCommand="";
+		batch.setStatus("started");
+		batchServiceApi.saveBatchRecords(batch);
+		for (t_batch_details t_batch_details : imeiList) {
+			
+			
+				
+				if(t_batch_details.getTcuCommand()!=null)
+				{
+				  tcuCommand			= 	"$TMCFG|START OTA "+t_batch_details.getTcuVersion()+"/#";
+					if(publishtopic(t_batch_details.getTcuCommand()))	
+					{
+						batchDetailsLogServiceApi.update_records(tcuCommand,orgName,batchid,"receive","done",new Timestamp(Calendar.getInstance().getTime().getTime()),t_batch_details.getTcuCommand(),t_batch_details.getIMEI(),"TCU");
+						batchDetailsServiceApi.update_records(t_batch_details);
+					}
+				}
+			if(t_batch_details.getBmsCommand()!=null)//BMSOTACFGOTA
+			{
+			  bmsCommand			= 	"$TMCFG|START BMSOTA "+t_batch_details.getBmsVersion()+"/#";
+				if(publishtopic(t_batch_details.getBmsCommand()))	
+				{
+					batchDetailsLogServiceApi.update_records(bmsCommand,orgName,batchid,"receive","done",new Timestamp(Calendar.getInstance().getTime().getTime()),t_batch_details.getBmsCommand(),t_batch_details.getIMEI(),"BMS");
+					batchDetailsServiceApi.update_records(t_batch_details);				
+				}
+			}
+			if(t_batch_details.getCfgCommand()!=null)//BMSOTA
+			{
+			  cfgCommand			= 	"$TMCFG|START CFGOTA "+t_batch_details.getCfgVersion()+"/#";
+				if(publishtopic(t_batch_details.getBmsCommand()))	
+				{
+					batchDetailsLogServiceApi.update_records(cfgCommand,orgName,batchid,"receive","done",new Timestamp(Calendar.getInstance().getTime().getTime()),t_batch_details.getCfgCommand(),t_batch_details.getIMEI(),"CFG");
+					batchDetailsServiceApi.update_records(t_batch_details);
+				}
+			}
+				
+			}
+		if(flag)
+		{
+			batch.setStatus("done");
+			batch.setExecute("execute");
+			batchServiceApi.saveBatchRecords(batch);
+		}
+			
+		}catch (Exception e) {
+			// TODO: handle exception
+			flag=false;
+			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(new CustomResponse(403, "invalid batchid/something wrong"));
+		}
+		
+		return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(200, "success"));
+		
+	}
+
 	//batch run
-	@PostMapping("/batch_imei_run/{orgId}")
-	public ResponseEntity<CustomResponse> batch_IMEI_run(
+	@PostMapping("/bbatch_imei_run/{orgId}")
+	public ResponseEntity<CustomResponse> bbatch_IMEI_run(
 			@RequestParam("file") MultipartFile file,
 			@PathVariable(name = "orgId") Integer orgId,
 			@RequestParam("request") String json)
@@ -552,16 +619,15 @@ public class Controller {
 				      bmsCommand=jsonObj.getString("bmsCommand");
 				      cfgCommand=jsonObj.getString("cfgCommand");
 				      
-				      String serverName=null;
-				      String primaryPort=null;
-				      String fotaServerName=null;
-				      serverName 		= 	jsonObj.getString("serverName");	
-				      primaryPort		=	jsonObj.getString("primaryPort");
-				      fotaServerName	=	jsonObj.getString("fotaServerName");
-				      System.out.println("serverName 		: "+serverName);
-				      System.out.println("primaryPort 		: "+primaryPort);
-				      System.out.println("fotaServerName 	: "+fotaServerName);
-				      
+						/*
+						 * String serverName=null; String primaryPort=null; String fotaServerName=null;
+						 * serverName = jsonObj.getString("serverName"); primaryPort =
+						 * jsonObj.getString("primaryPort"); fotaServerName =
+						 * jsonObj.getString("fotaServerName");
+						 * System.out.println("serverName 		: "+serverName);
+						 * System.out.println("primaryPort 		: "+primaryPort);
+						 * System.out.println("fotaServerName 	: "+fotaServerName);
+						 */
 				      
 				      
 				      /*
@@ -839,7 +905,7 @@ public class Controller {
 		    
 		return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(200, "success"));
 		}
-		return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(new CustomResponse(400, "IMEI does not exist in t_asset"));
+		return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(new CustomResponse(403, "IMEI does not exist in t_asset"));
 	}
 
 	 private boolean publishtopic(String topic) {
@@ -959,6 +1025,7 @@ public class Controller {
 	}
 //@RequestBody String json
 //	@PostMapping("/upload-csv-file/{orgId}/{componentType}/{componentVersion}")
+	//updated upload csv file
   @PostMapping("/upload-csv-file/{orgId}")
 	public ResponseEntity<CustomResponse> uploadCSVFile(@RequestParam("file") MultipartFile file, Model model,
 			@PathVariable(name = "orgId") Integer orgId,@RequestParam("request") String json) {
@@ -973,26 +1040,59 @@ public class Controller {
 			 */
 		} else {
 
-			String tcu,tcuVersion,bms,bmsVersion,cfg,cfgVersion;
+			String tcu,tcuVersion,bms,bmsVersion,cfg,cfgVersion,tcuCommand,bmsCommand,cfgCommand;
 			tcuVersion=bmsVersion=cfgVersion=null;
 			tcu=bms=cfg=null;
 			
-			 Gson gson = new Gson();
-		      Version ver = gson.fromJson(json, Version.class);
-		      tcu=ver.getTcu();
-		      bms=ver.getBms();
-		      cfg=ver.getCfg();
+			/*
+			 * Gson gson = new Gson(); Versionn ver = gson.fromJson(json, Versionn.class);
+			 * tcu=ver.getTcu(); bms=ver.getBms(); cfg=ver.getCfg();
+			 */
 		      
-		     if(ver.getTcu()!=null)
-		    	 tcuVersion=ver.getTcuVersion();
-		     if(ver.getBms()!=null)
-		    	 bmsVersion=ver.getBmsVersion();
-		     if(ver.getCfg()!=null)
-		    	 cfgVersion=ver.getCfgVersion();
-		     if(ver.getBms()==null)
-		    	 cfg=null;
+		      JSONObject jsonObj=new JSONObject(json);
+		      tcu=jsonObj.getString("tcu");
+		      bms=jsonObj.getString("bms");
+		      cfg=jsonObj.getString("cfg");
 		      
-		     
+		      tcuCommand=jsonObj.getString("tcuCommand");
+		      bmsCommand=jsonObj.getString("bmsCommand");
+		      cfgCommand=jsonObj.getString("cfgCommand");
+		      
+		      tcuVersion=null;
+		      bmsVersion=null;
+		      cfgVersion=null;
+		      System.out.println("TCU :: "+tcu);
+		      System.out.println("BMS :: "+bms);
+		      System.out.println("CFG :: "+cfg);
+		      
+		      if(!tcu.equals("null")) {
+			    	// tcuVersion=ver.getTcuVersion();
+			    	 tcuVersion=jsonObj.getString("tcuVersion");
+			    	 t_commands commandEntity1=commandsServiceAPI.findByTcu(tcu.toLowerCase()); 
+			     }
+			     if(!bms.equals("null")) {
+			    	// bmsVersion=ver.getBmsVersion();
+			    	 bmsVersion=jsonObj.getString("bmsVersion");
+			    	  t_commands commandEntity2=commandsServiceAPI.findByBms(bms.toLowerCase());
+			     }
+			     if(!cfg.equals("null")) {
+			    	// cfgVersion=ver.getCfgVersion();
+			    	 cfgVersion=jsonObj.getString("cfgVersion");
+				      t_commands commandEntity3=commandsServiceAPI.findByCfg(cfg.toLowerCase());
+			     }
+			     if(bms.equals("null"))
+			    	 cfg="null";
+		      
+			     String tcu_topic1 = "";
+			      String bms_topic2 = "";
+			      String cfg_topic3 = "";
+			      
+			      String tcu_command1 = "";
+			      String bms_command2 = "";
+			      String cfg_command3 = "";
+			      
+			      
+			     
 			String orgName = organizationServiceAPI.findById(orgId);
 			List<Batch_Data> bdataList = new ArrayList<Batch_Data>();
 			// parse CSV file to create a list of `User` objects
@@ -1019,7 +1119,7 @@ public class Controller {
 					AssetEntity assetEntity = assetsServiceAPI.exists(asset);
 					if (assetEntity != null) {
 						System.out.println("asset Entity not null");
-						if(batchDetailsServiceApi.findByImei(Long.parseLong(nextRecord[0]))==null) {
+						if(batchDetailsServiceApi.findByImei(Long.parseLong(nextRecord[0]))==null || "fail".equalsIgnoreCase(batchDetailsServiceApi.findByImei(Long.parseLong(nextRecord[0])).getStatus())) {
 							flag=true;
 						Batch_Data bd = new Batch_Data();
 						// bd.setSNo(nextRecord[0]);
@@ -1059,48 +1159,263 @@ public class Controller {
 				System.out.println("batchServiceApi.getMaxId()  :: " + batchid);
 
 				for (Batch_Data emei_Batch : bdataList) {
-
-					if(tcu!=null)
+					  tcu_topic1 = null;
+				       bms_topic2 = null;
+				       cfg_topic3 = null;
+				      
+				       tcu_command1 = null;
+				       bms_command2 = null;
+				       cfg_command3 = null;
+					
+					 //1
+			      	if(!tcu.equals("null") && !tcuCommand.equals("null") && tcuCommand.equals("1")) {
+				    	 t_commands commandEntity1=commandsServiceAPI.findByTcu(tcu.toLowerCase()); 
+				    	 tcu_topic1					=	commandEntity1.getReset()+"TCU/"+emei_Batch.getImei();
+				    	 String tcuString			= 	"$TMCFG|START OTA "+tcuVersion+"/#";
+				    	 tcu_command1				=	tcuString;
+				     }
+				     if(!bms.equals("null") && !bmsCommand.equals("null") && bmsCommand.equals("1")) {
+				    	  t_commands commandEntity2	=	commandsServiceAPI.findByBms(bms.toLowerCase());
+				    	  bms_topic2				=	commandEntity2.getReset()+"BMS/"+emei_Batch.getImei();
+				    	  String bmsString			=	"$TMCFG|START BMSOTA "+bmsVersion+"/#";
+				    	  bms_command2				=	bmsString;
+				     }
+				     if(!cfg.equals("null") && !cfgCommand.equals("null") && cfgCommand.equals("1")) {
+					      t_commands commandEntity3	=	commandsServiceAPI.findByCfg(cfg.toLowerCase());
+					      cfg_topic3				=	commandEntity3.getReset()+"CFG/"+emei_Batch.getImei();
+					      String cfgString			=	"$TMCFG|START CFGOTA "+cfgVersion+"/#";
+					      cfg_command3				=	cfgString;
+				     }
+				     
+				     //2
+				     if(!tcu.equals("null") && !tcuCommand.equals("null") && tcuCommand.equals("2")) {
+				    	 t_commands commandEntity1=commandsServiceAPI.findByTcu(tcu.toLowerCase()); 
+				    	 tcu_topic1					=	commandEntity1.getShowconfig()+"TCU/"+emei_Batch.getImei();
+				    	 String tcuString			= 	"$TMCFG|START OTA "+tcuVersion+"/#";
+				    	 tcu_command1				=	tcuString;
+				     }
+				     if(!bms.equals("null") && !bmsCommand.equals("null") && bmsCommand.equals("2")) {
+				    	  t_commands commandEntity2	=	commandsServiceAPI.findByBms(bms.toLowerCase());
+				    	  bms_topic2				=	commandEntity2.getShowconfig()+"BMS/"+emei_Batch.getImei();
+				    	  String bmsString			=	"$TMCFG|START BMSOTA "+bmsVersion+"/#";
+				    	  bms_command2				=	bmsString;
+				     }
+				     if(!cfg.equals("null") && !cfgCommand.equals("null") && cfgCommand.equals("2")) {
+					      t_commands commandEntity3	=	commandsServiceAPI.findByCfg(cfg.toLowerCase());
+					      cfg_topic3				=	commandEntity3.getShowconfig()+"CFG/"+emei_Batch.getImei();
+					      String cfgString			=	"$TMCFG|START CFGOTA "+cfgVersion+"/#";
+					      cfg_command3				=	cfgString;
+				     }
+				     
+				     //3
+				     if(!tcu.equals("null") && !tcuCommand.equals("null") && tcuCommand.equals("3")) {
+				    	 t_commands commandEntity1=commandsServiceAPI.findByTcu(tcu.toLowerCase()); 
+				    	 tcu_topic1					=	commandEntity1.getShowcredential()+"TCU/"+emei_Batch.getImei();
+				    	 String tcuString			= 	"$TMCFG|START OTA "+tcuVersion+"/#";
+				    	 tcu_command1				=	tcuString;
+				     }
+				     if(!bms.equals("null") && !bmsCommand.equals("null") && bmsCommand.equals("3")) {
+				    	  t_commands commandEntity2	=	commandsServiceAPI.findByBms(bms.toLowerCase());
+				    	  bms_topic2				=	commandEntity2.getShowcredential()+"BMS/"+emei_Batch.getImei();
+				    	  String bmsString			=	"$TMCFG|START BMSOTA "+bmsVersion+"/#";
+				    	  bms_command2				=	bmsString;
+				     }
+				     if(!cfg.equals("null") && !cfgCommand.equals("null") && cfgCommand.equals("3")) {
+					      t_commands commandEntity3	=	commandsServiceAPI.findByCfg(cfg.toLowerCase());
+					      cfg_topic3				=	commandEntity3.getShowcredential()+"CFG/"+emei_Batch.getImei();
+					      String cfgString			=	"$TMCFG|START CFGOTA "+cfgVersion+"/#";
+					      cfg_command3				=	cfgString;
+				     }
+				     
+				     //4
+				     if(!tcu.equals("null") && !tcuCommand.equals("null") && tcuCommand.equals("4")) {
+				    	 t_commands commandEntity1=commandsServiceAPI.findByTcu(tcu.toLowerCase()); 
+				    	 tcu_topic1					=	commandEntity1.getShowota()+"TCU/"+emei_Batch.getImei();
+				    	 String tcuString			= 	"$TMCFG|START OTA "+tcuVersion+"/#";
+				    	 tcu_command1				=	tcuString;
+				     }
+				     if(!bms.equals("null") && !bmsCommand.equals("null") && bmsCommand.equals("4")) {
+				    	  t_commands commandEntity2	=	commandsServiceAPI.findByBms(bms.toLowerCase());
+				    	  bms_topic2				=	commandEntity2.getShowota()+"BMS/"+emei_Batch.getImei();
+				    	  String bmsString			=	"$TMCFG|START BMSOTA "+bmsVersion+"/#";
+				    	  bms_command2				=	bmsString;
+				     }
+				     if(!cfg.equals("null") && !cfgCommand.equals("null") && cfgCommand.equals("4")) {
+					      t_commands commandEntity3	=	commandsServiceAPI.findByCfg(cfg.toLowerCase());
+					      cfg_topic3				=	commandEntity3.getShowota()+"CFG/"+emei_Batch.getImei();
+					      String cfgString			=	"$TMCFG|START CFGOTA "+cfgVersion+"/#";
+					      cfg_command3				=	cfgString;
+				     }
+				     
+				     //5
+				     if(!tcu.equals("null") && !tcuCommand.equals("null") && tcuCommand.equals("5")) {
+				    	 t_commands commandEntity1=commandsServiceAPI.findByTcu(tcu.toLowerCase()); 
+				    	 tcu_topic1					=	commandEntity1.getShowpubtopics()+"TCU/"+emei_Batch.getImei();
+				    	 String tcuString			= 	"$TMCFG|START OTA "+tcuVersion+"/#";
+				    	 tcu_command1				=	tcuString;
+				     }
+				     if(!bms.equals("null") && !bmsCommand.equals("null") && bmsCommand.equals("5")) {
+				    	  t_commands commandEntity2	=	commandsServiceAPI.findByBms(bms.toLowerCase());
+				    	  bms_topic2				=	commandEntity2.getShowpubtopics()+"BMS/"+emei_Batch.getImei();
+				    	  String bmsString			=	"$TMCFG|START BMSOTA "+bmsVersion+"/#";
+				    	  bms_command2				=	bmsString;
+				     }
+				     if(!cfg.equals("null") && !cfgCommand.equals("null") && cfgCommand.equals("5")) {
+					      t_commands commandEntity3	=	commandsServiceAPI.findByCfg(cfg.toLowerCase());
+					      cfg_topic3				=	commandEntity3.getShowpubtopics()+"CFG/"+emei_Batch.getImei();
+					      String cfgString			=	"$TMCFG|START CFGOTA "+cfgVersion+"/#";
+					      cfg_command3				=	cfgString;
+				     }
+				     
+				     //6
+				     if(!tcu.equals("null") && !tcuCommand.equals("null") && tcuCommand.equals("6")) {
+				    	 t_commands commandEntity1=commandsServiceAPI.findByTcu(tcu.toLowerCase()); 
+				    	 tcu_topic1					=	commandEntity1.getShowsubtopics()+"TCU/"+emei_Batch.getImei();
+				    	 String tcuString			= 	"$TMCFG|START OTA "+tcuVersion+"/#";
+				    	 tcu_command1				=	tcuString;
+				     }
+				     if(!bms.equals("null") && !bmsCommand.equals("null") && bmsCommand.equals("6")) {
+				    	  t_commands commandEntity2	=	commandsServiceAPI.findByBms(bms.toLowerCase());
+				    	  bms_topic2				=	commandEntity2.getShowsubtopics()+"BMS/"+emei_Batch.getImei();
+				    	  String bmsString			=	"$TMCFG|START BMSOTA "+bmsVersion+"/#";
+				    	  bms_command2				=	bmsString;
+				     }
+				     if(!cfg.equals("null") && !cfgCommand.equals("null") && cfgCommand.equals("6")) {
+					      t_commands commandEntity3	=	commandsServiceAPI.findByCfg(cfg.toLowerCase());
+					      cfg_topic3				=	commandEntity3.getShowsubtopics()+"CFG/"+emei_Batch.getImei();
+					      String cfgString			=	"$TMCFG|START CFGOTA "+cfgVersion+"/#";
+					      cfg_command3				=	cfgString;
+				     }
+				     
+				     //7
+				     if(!tcu.equals("null") && !tcuCommand.equals("null") && tcuCommand.equals("7")) {
+				    	 t_commands commandEntity1=commandsServiceAPI.findByTcu(tcu.toLowerCase()); 
+				    	 tcu_topic1					=	commandEntity1.getSetservername()+"TCU/"+emei_Batch.getImei();
+				    	 String tcuString			= 	"$TMCFG|START OTA "+tcuVersion+"/#";
+				    	 tcu_command1				=	tcuString;
+				     }
+				     if(!bms.equals("null") && !bmsCommand.equals("null") && bmsCommand.equals("7")) {
+				    	  t_commands commandEntity2	=	commandsServiceAPI.findByBms(bms.toLowerCase());
+				    	  bms_topic2				=	commandEntity2.getSetservername()+"BMS/"+emei_Batch.getImei();
+				    	  String bmsString			=	"$TMCFG|START BMSOTA "+bmsVersion+"/#";
+				    	  bms_command2				=	bmsString;
+				     }
+				     if(!cfg.equals("null") && !cfgCommand.equals("null") && cfgCommand.equals("7")) {
+					      t_commands commandEntity3	=	commandsServiceAPI.findByCfg(cfg.toLowerCase());
+					      cfg_topic3				=	commandEntity3.getSetservername()+"CFG/"+emei_Batch.getImei();
+					      String cfgString			=	"$TMCFG|START CFGOTA "+cfgVersion+"/#";
+					      cfg_command3				=	cfgString;
+				     }
+				     
+				     //8
+				     if(!tcu.equals("null") && !tcuCommand.equals("null") && tcuCommand.equals("8")) {
+				    	 t_commands commandEntity1=commandsServiceAPI.findByTcu(tcu.toLowerCase()); 
+				    	 tcu_topic1					=	commandEntity1.getPrimaryport()+"TCU/"+emei_Batch.getImei();
+				    	 String tcuString			= 	"$TMCFG|START OTA "+tcuVersion+"/#";
+				    	 tcu_command1				=	tcuString;
+				     }
+				     if(!bms.equals("null") && !bmsCommand.equals("null") && bmsCommand.equals("8")) {
+				    	  t_commands commandEntity2	=	commandsServiceAPI.findByBms(bms.toLowerCase());
+				    	  bms_topic2				=	commandEntity2.getPrimaryport()+"BMS/"+emei_Batch.getImei();
+				    	  String bmsString			=	"$TMCFG|START BMSOTA "+bmsVersion+"/#";
+				    	  bms_command2				=	bmsString;
+				     }
+				     if(!cfg.equals("null") && !cfgCommand.equals("null") && cfgCommand.equals("8")) {
+					      t_commands commandEntity3	=	commandsServiceAPI.findByCfg(cfg.toLowerCase());
+					      cfg_topic3				=	commandEntity3.getPrimaryport()+"CFG/"+emei_Batch.getImei();
+					      String cfgString			=	"$TMCFG|START CFGOTA "+cfgVersion+"/#";
+					      cfg_command3				=	cfgString;
+				     }
+				     
+				     //9
+				     if(!tcu.equals("null") && !tcuCommand.equals("null") && tcuCommand.equals("9")) {
+				    	 t_commands commandEntity1=commandsServiceAPI.findByTcu(tcu.toLowerCase()); 
+				    	 tcu_topic1					=	commandEntity1.getFotaservername()+"TCU/"+emei_Batch.getImei();
+				    	 String tcuString			= 	"$TMCFG|START OTA "+tcuVersion+"/#";
+				    	 tcu_command1				=	tcuString;
+				     }
+				     if(!bms.equals("null") && !bmsCommand.equals("null") && bmsCommand.equals("9")) {
+				    	  t_commands commandEntity2	=	commandsServiceAPI.findByBms(bms.toLowerCase());
+				    	  bms_topic2				=	commandEntity2.getFotaservername()+"BMS/"+emei_Batch.getImei();
+				    	  String bmsString			=	"$TMCFG|START BMSOTA "+bmsVersion+"/#";
+				    	  bms_command2				=	bmsString;
+				     }
+				     if(!cfg.equals("null") && !cfgCommand.equals("null") && cfgCommand.equals("9")) {
+					      t_commands commandEntity3	=	commandsServiceAPI.findByCfg(cfg.toLowerCase());
+					      cfg_topic3				=	commandEntity3.getFotaservername()+"CFG/"+emei_Batch.getImei();
+					      String cfgString			=	"$TMCFG|START CFGOTA "+cfgVersion+"/#";
+					      cfg_command3				=	cfgString;
+				     }
+				     
+				     //10
+				     if(!tcu.equals("null") && !tcuCommand.equals("null") && tcuCommand.equals("10")) {
+				    	 t_commands commandEntity1=commandsServiceAPI.findByTcu(tcu.toLowerCase()); 
+				    	 tcu_topic1					=	commandEntity1.getSaveconfig()+"TCU/"+emei_Batch.getImei();
+				    	 String tcuString			= 	"$TMCFG|START OTA "+tcuVersion+"/#";
+				    	 tcu_command1				=	tcuString;
+				     }
+				     if(!bms.equals("null") && bmsCommand.equals("null") && bmsCommand.equals("10")) {
+				    	  t_commands commandEntity2	=	commandsServiceAPI.findByBms(bms.toLowerCase());
+				    	  bms_topic2				=	commandEntity2.getSaveconfig()+"BMS/"+emei_Batch.getImei();
+				    	  String bmsString			=	"$TMCFG|START BMSOTA "+bmsVersion+"/#";
+				    	  bms_command2				=	bmsString;
+				     }
+				     if(!cfg.equals("null") && !cfgCommand.equals("null") && cfgCommand.equals("10")) {
+					      t_commands commandEntity3	=	commandsServiceAPI.findByCfg(cfg.toLowerCase());
+					      cfg_topic3				=	commandEntity3.getSaveconfig()+"CFG/"+emei_Batch.getImei();
+					      String cfgString			=	"$TMCFG|START CFGOTA "+cfgVersion+"/#";
+					      cfg_command3				=	cfgString;
+				     }
+				     
+				 
+					if(!"null".equals(tcu))
 					{
+						System.out.println("TCU------------------------------------------------------------------------------------------");
 						t_batch_details_log log=new t_batch_details_log();
-						String tcuCommand="$TMCFG|START OTA "+tcuVersion+"/#";
+						//String tcuCommand="$TMCFG|START OTA "+tcuVersion+"/#";
 						log.setIMEI(Long.parseLong(emei_Batch.getImei()));
 						log.setOrgName(orgName);
 						log.setResponse("send");
 						log.setStatus("running");
 						log.setTime(new Timestamp(Calendar.getInstance().getTime().getTime()));
 						log.setBatch_id(batchid);
-						log.setCommand(tcuCommand);
+						log.setCommand(tcu_command1);
 						log.setType("TCU");
+						log.setTopic(tcu_topic1);
 						
 						batchDetailsLogServiceApi.save_tcu_command(log);
 					}
-					if(bms!=null)
+					if(!"null".equals(bms))
 					{
+						System.out.println("BMS---------------------------------------------------------------------------------------");
 						t_batch_details_log log=new t_batch_details_log();
-						String bmsCommand="$TMCFG|START BMSOTA "+bmsVersion+"/#";
+					//	String bmsCommand="$TMCFG|START BMSOTA "+bmsVersion+"/#";
 						log.setIMEI(Long.parseLong(emei_Batch.getImei()));
 						log.setOrgName(orgName);
 						log.setResponse("send");
 						log.setStatus("running");
 						log.setTime(new Timestamp(Calendar.getInstance().getTime().getTime()));
 						log.setBatch_id(batchid);
-						log.setCommand(bmsCommand);
+						log.setCommand(bms_command2);
 						log.setType("BMS");
+						log.setTopic(bms_topic2);
 						batchDetailsLogServiceApi.save_bms_command(log);
 					}
-					if(bms!=null && cfg!=null)
+					
+					if(!"null".equals(bms) && !"null".equals(cfg))
 					{
+						System.out.println("CFG------------------------------------------------------------------------------------------");
 						t_batch_details_log log=new t_batch_details_log();
-						String cfgCommand="$TMCFG|START CFGOTA "+cfgVersion+"/#";
+					//	String cfgCommand="$TMCFG|START CFGOTA "+cfgVersion+"/#";
 						log.setIMEI(Long.parseLong(emei_Batch.getImei()));
 						log.setOrgName(orgName);
 						log.setResponse("send");
 						log.setStatus("running");
 						log.setTime(new Timestamp(Calendar.getInstance().getTime().getTime()));
 						log.setBatch_id(batchid);
-						log.setCommand(cfgCommand);
+						log.setCommand(cfg_command3);
 						log.setType("CFG");
+						log.setTopic(cfg_topic3);
 						
 						batchDetailsLogServiceApi.save_cfg_command(log);
 					}
@@ -1116,7 +1431,14 @@ public class Controller {
 						batch_details.setStatus(null);
 						batch_details.setTCL_version(emei_Batch.getTcu());
 						batch_details.setBatch_id(batchid);
+						batch_details.setTcuCommand(tcu_command1);
+						batch_details.setBmsCommand(bms_command2);
+						batch_details.setCfgCommand(cfg_command3);
 						batch_details.setEnd_date(new Timestamp(Calendar.getInstance().getTime().getTime()));
+						batch_details.setTcuVersion(tcuVersion);
+						batch_details.setBmsVersion(bmsVersion);
+						batch_details.setCfgVersion(cfgVersion);
+						
 
 						batchDetailsServiceApi.saveBatchDetailsRecords(batch_details);
 					}
@@ -1129,9 +1451,186 @@ public class Controller {
 		if(flag)
 		return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(200, "file-upload-status"));
 		else
-		return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body(new CustomResponse(200, "fail-No-new-record-found"));
+		return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body(new CustomResponse(203, "fail-No-new-record-found"));
 
 	}
+  
+  
+  //updated file upload csv
+  @PostMapping("/uupload-csv-file/{orgId}")
+ 	public ResponseEntity<CustomResponse> uuploadCSVFile(@RequestParam("file") MultipartFile file, Model model,
+ 			@PathVariable(name = "orgId") Integer orgId,@RequestParam("request") String json) {
+    boolean flag=false;
+ 		// validate file
+ 		if (file.isEmpty()) {
+ 			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(new CustomResponse(417, "file-is-empty"));
+
+ 			/*
+ 			 * model.addAttribute("message", "Please select a CSV file to upload.");
+ 			 * model.addAttribute("status", false);
+ 			 */
+ 		} else {
+
+ 			String tcu,tcuVersion,bms,bmsVersion,cfg,cfgVersion;
+ 			tcuVersion=bmsVersion=cfgVersion=null;
+ 			tcu=bms=cfg=null;
+ 			
+ 			 Gson gson = new Gson();
+ 		      Version ver = gson.fromJson(json, Version.class);
+ 		      tcu=ver.getTcu();
+ 		      bms=ver.getBms();
+ 		      cfg=ver.getCfg();
+ 		      
+ 		     if(ver.getTcu()!=null)
+ 		    	 tcuVersion=ver.getTcuVersion();
+ 		     if(ver.getBms()!=null)
+ 		    	 bmsVersion=ver.getBmsVersion();
+ 		     if(ver.getCfg()!=null)
+ 		    	 cfgVersion=ver.getCfgVersion();
+ 		     if(ver.getBms()==null)
+ 		    	 cfg=null;
+ 		      
+ 		     
+ 			String orgName = organizationServiceAPI.findById(orgId);
+ 			List<Batch_Data> bdataList = new ArrayList<Batch_Data>();
+ 			// parse CSV file to create a list of `User` objects
+ 			try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+
+ 				CSVReader csvReader = new CSVReader(reader);
+ 				String[] nextRecord;
+ 				// we are going to read data line by line
+ 				while ((nextRecord = csvReader.readNext()) != null) {
+ 					AssetEntity asset = new AssetEntity();
+ 					asset.setOrgId(orgId);
+ 					asset.setImeiNo(Long.parseLong(nextRecord[0]));
+ 					System.out.println("asset.getOrgId() : " + asset.getOrgId());
+ 					System.out.println("asset.getImeiNo() : " + asset.getImeiNo());
+
+ 					t_batch_details batch_details=null;
+ 					
+ 				//	boolean batch_details1=batchDetailsServiceApi.exists(batch_details);
+ 				//	batch_details=BatchDetailsServiceApi.findByImei(Long.parseLong(nextRecord[0]));
+ 					t_batch_details t=batchDetailsServiceApi.findByImei(Long.parseLong(nextRecord[0]));
+ 					System.out.println("9999999999999999999999999 :: "+t);
+ 						
+ 					
+ 					AssetEntity assetEntity = assetsServiceAPI.exists(asset);
+ 					if (assetEntity != null) {
+ 						System.out.println("asset Entity not null");
+ 						if(batchDetailsServiceApi.findByImei(Long.parseLong(nextRecord[0]))==null) {
+ 							flag=true;
+ 						Batch_Data bd = new Batch_Data();
+ 						// bd.setSNo(nextRecord[0]);
+ 						bd.setBatch_Name(orgName);
+ 						bd.setImei(assetEntity.getImeiNo() + "");
+ 						bd.setTcu(assetEntity.getTcu());
+ 						bd.setBms(assetEntity.getBms());
+ 						bd.setCfg(assetEntity.getBmsConfigurationVersion() + "");
+ 						 bdataList.add(bd);
+ 						}
+ 					}
+ 				}
+
+ 			} catch (Exception ex) {
+ 				System.out.println("inside catch block");
+ 				ex.printStackTrace();
+ 				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+ 						.body(new CustomResponse(500, "An error occurred while processing the CSV file"));
+ 				// model.addAttribute("message", "An error occurred while processing the CSV
+ 				// file.");
+ 				// model.addAttribute("status", false);
+ 			}
+ 			if (!bdataList.isEmpty() && bdataList != null) {
+ 				
+ 				t_batch batch = new t_batch();
+ 				batch.setUsr("usr1");
+ 				batch.setBatch_org_name(bdataList.get(0).getBatch_Name());
+ 				batch.setCount(bdataList.size());
+ 				batch.setDescription("description_1");
+ 				batch.setStart_date(new Timestamp(Calendar.getInstance().getTime().getTime()));
+ 				batch.setEnd_date(new Timestamp(Calendar.getInstance().getTime().getTime()));
+ 				batch.setExecute("new");
+ 				batch.setStatus("not start");
+ 				batchServiceApi.saveBatchRecords(batch);
+
+ 				Long batchid = batchServiceApi.getMaxId();
+ 				System.out.println("batchServiceApi.getMaxId()  :: " + batchid);
+
+ 				for (Batch_Data emei_Batch : bdataList) {
+
+ 					if(tcu!=null)
+ 					{
+ 						t_batch_details_log log=new t_batch_details_log();
+ 						String tcuCommand="$TMCFG|START OTA "+tcuVersion+"/#";
+ 						log.setIMEI(Long.parseLong(emei_Batch.getImei()));
+ 						log.setOrgName(orgName);
+ 						log.setResponse("send");
+ 						log.setStatus("running");
+ 						log.setTime(new Timestamp(Calendar.getInstance().getTime().getTime()));
+ 						log.setBatch_id(batchid);
+ 						log.setCommand(tcuCommand);
+ 						log.setType("TCU");
+ 						
+ 						batchDetailsLogServiceApi.save_tcu_command(log);
+ 					}
+ 					if(bms!=null)
+ 					{
+ 						t_batch_details_log log=new t_batch_details_log();
+ 						String bmsCommand="$TMCFG|START BMSOTA "+bmsVersion+"/#";
+ 						log.setIMEI(Long.parseLong(emei_Batch.getImei()));
+ 						log.setOrgName(orgName);
+ 						log.setResponse("send");
+ 						log.setStatus("running");
+ 						log.setTime(new Timestamp(Calendar.getInstance().getTime().getTime()));
+ 						log.setBatch_id(batchid);
+ 						log.setCommand(bmsCommand);
+ 						log.setType("BMS");
+ 						batchDetailsLogServiceApi.save_bms_command(log);
+ 					}
+ 					if(bms!=null && cfg!=null)
+ 					{
+ 						t_batch_details_log log=new t_batch_details_log();
+ 						String cfgCommand="$TMCFG|START CFGOTA "+cfgVersion+"/#";
+ 						log.setIMEI(Long.parseLong(emei_Batch.getImei()));
+ 						log.setOrgName(orgName);
+ 						log.setResponse("send");
+ 						log.setStatus("running");
+ 						log.setTime(new Timestamp(Calendar.getInstance().getTime().getTime()));
+ 						log.setBatch_id(batchid);
+ 						log.setCommand(cfgCommand);
+ 						log.setType("CFG");
+ 						
+ 						batchDetailsLogServiceApi.save_cfg_command(log);
+ 					}
+ 					
+ 					if (!batchDetailsServiceApi.existsByImeiNo(Long.parseLong(emei_Batch.getImei()))) {
+ 						t_batch_details batch_details = new t_batch_details();
+ 						batch_details.setStart_date(new Timestamp(Calendar.getInstance().getTime().getTime()));
+ 						batch_details.setBMS(emei_Batch.getBms() + "");
+ 						batch_details.setCFG(emei_Batch.getCfg() + "");
+ 						batch_details.setIMEI(Long.parseLong(emei_Batch.getImei()));
+ 						batch_details.setMax_time(6);
+ 						batch_details.setSend_command("send_command_1");
+ 						batch_details.setStatus(null);
+ 						batch_details.setTCL_version(emei_Batch.getTcu());
+ 						batch_details.setBatch_id(batchid);
+ 						batch_details.setEnd_date(new Timestamp(Calendar.getInstance().getTime().getTime()));
+
+ 						batchDetailsServiceApi.saveBatchDetailsRecords(batch_details);
+ 					}
+
+ 				}
+ 			} else
+ 				System.out.println("0000000000000000000000000000 list is empty");
+
+ 		}
+ 		if(flag)
+ 		return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(200, "file-upload-status"));
+ 		else
+ 		return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body(new CustomResponse(200, "fail-No-new-record-found"));
+
+ 	}
+  
 
 	/*
 	 * 
@@ -1248,15 +1747,15 @@ public class Controller {
 		return null;
 	}
 
-	//order by date
-	@RequestMapping("/get_t_batch_details_log_By_IMEI_orderByDate/{IMEI}")
+	//order by date by imei
+	@GetMapping("/get_t_batch_details_log_By_IMEI_orderByDate/{IMEI}")
 	public List<t_batch_details_log> get_t_batch_details_logByIMEI(@PathVariable(name = "IMEI") Long IMEI) {
 		return batchDetailsLogServiceApi.get_t_batch_details_logByIMEI(IMEI);
 
 	}
 	
 	//order by date by batch_id
-		@RequestMapping("/get_t_batch_details_log_By_Batch_id_orderByDate/{batch_id}")
+		@GetMapping("/get_t_batch_details_log_By_Batch_id_orderByDate/{batch_id}")
 		public List<t_batch_details_log> get_t_batch_details_logBy_Batch_id(@PathVariable(name = "batch_id") Long batch_id) {
 			return batchDetailsLogServiceApi.get_t_batch_details_logBy_Batch_id(batch_id);
 
@@ -1345,10 +1844,10 @@ public class Controller {
 					 
 				  	if(z>0)	 
 				  		return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(200,"success"));
-				  	else return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(200,"record not exist"));
+				  	else return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(203,"record not exist"));
 			  
 			}
-		 return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(200,"can't delete batch"));
+		 return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(204,"can't delete batch"));
 	  }
 		
 	 //delete_single_imei
@@ -1368,7 +1867,7 @@ public class Controller {
 					 if(batch_details==null)
 					  { 
 						 System.out.println("batch_details NULL");
-						 return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(200,"record not exit in batchDetails"));
+						 return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(203,"record not exit in batchDetails"));
 					  }
 					  else {
 						  y	=	batchDetailsServiceApi.deleteByIMEI(imei);
@@ -1383,7 +1882,7 @@ public class Controller {
 				  batchDetailsLogServiceApi.deleteByIMEI(imei);
 				  return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(200,"success"));
 			  }
-			  return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(200,"can't delete imei"));
+			  return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(204,"can't delete imei"));
 			
 		  }
 		 
