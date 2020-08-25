@@ -20,7 +20,7 @@ public class t_batch {
 	private String usr;
 	//private String user;
 	
-	private String batch_org_name;
+	private String batchOrgName;
 	
 	private long count;
 	
@@ -58,11 +58,11 @@ public class t_batch {
 	}
 
 	public String getBatch_org_name() {
-		return batch_org_name;
+		return batchOrgName;
 	}
 
 	public void setBatch_org_name(String batch_org_name) {
-		this.batch_org_name = batch_org_name;
+		this.batchOrgName = batch_org_name;
 	}
 
 	public long getCount() {

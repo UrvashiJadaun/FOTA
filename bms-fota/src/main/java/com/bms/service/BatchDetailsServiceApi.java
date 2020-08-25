@@ -5,6 +5,8 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
+import com.bms.Entity.AssetEntity;
+import com.bms.model.t_batch;
 import com.bms.model.t_batch_details;
 
 @Component
@@ -24,6 +26,8 @@ public interface BatchDetailsServiceApi {
 	public int deleteByIMEI(Long imei);
 
 	public void update_records(t_batch_details t_batch_details);
+
+	public boolean checkIMEI_IN_ASEET(AssetEntity assetEntity, List<t_batch> t_batchList);
 
 
 

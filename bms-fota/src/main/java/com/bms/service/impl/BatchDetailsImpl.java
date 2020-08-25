@@ -5,6 +5,8 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.bms.Entity.AssetEntity;
+import com.bms.model.t_batch;
 import com.bms.model.t_batch_details;
 import com.bms.repo.BatchRepo;
 import com.bms.repo.Batch_detailsRepo;
@@ -70,6 +72,19 @@ public class BatchDetailsImpl implements BatchDetailsServiceApi{
 		t_batch_details.setStatus("done");
 		batch_detailsRepo.save(t_batch_details);
 		
+	}
+	@Override
+	public boolean checkIMEI_IN_ASEET(AssetEntity assetEntity, List<t_batch> t_batchList) {
+			for (t_batch t_batch : t_batchList) {
+				List<t_batch_details> batchDetailsList=findAllByBatch_id(t_batch.getBatch_id());
+				for (t_batch_details t_batchDetails : batchDetailsList) {
+					if(t_batchDetails.getIMEI()==assetEntity.getImeiNo())
+						return false;
+				}
+			}
+			return true;
+	     	
+	
 	}
 
 

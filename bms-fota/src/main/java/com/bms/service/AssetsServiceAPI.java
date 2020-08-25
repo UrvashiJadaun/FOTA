@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import com.bms.Entity.AssetEntity;
+import com.bms.model.t_batch;
 
 @Component
 public interface AssetsServiceAPI {
@@ -26,5 +27,6 @@ public interface AssetsServiceAPI {
 	public List<String> get_distinct_version_of_cisconfg();
 
 	public List<AssetEntity> getAssetDataByOrgId(Integer orgId);
+
 
 }

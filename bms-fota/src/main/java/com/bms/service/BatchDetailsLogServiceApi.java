@@ -35,6 +35,8 @@ public interface BatchDetailsLogServiceApi {
 
 	boolean existByIMEI(Long imei);
 
+	List<t_batch_details_log> get_t_batch_detailsBy_IMEI_AND_BATCH(Long iMEI, Long batchid);
+
 
 
 	//void update_records(String response, String status, Timestamp timestamp, long imei, String tcu, String topic);

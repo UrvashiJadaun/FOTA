@@ -40,6 +40,10 @@ public interface Batch_details_logRepo extends JpaRepository<t_batch_details_log
 
 	int deleteByIMEI(Long imei);
 	boolean existsByIMEI(Long imei);
+	
+	
+	 @Query(value="select * from t_batch_details_log t where t.imei= :imei and t.batchid= :batchid order by time desc",nativeQuery = true)
+	List<t_batch_details_log> getAllByIMEIandBatchid(@Param("imei") long imei, @Param("batchid") Long batchid);
 
 
 	

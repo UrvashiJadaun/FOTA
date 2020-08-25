@@ -77,6 +77,12 @@ public class BatchServiceImpl implements BatchServiceApi{
 		Optional<t_batch>	batch	=	 batchRepo.findById(batch_id);
 		return batch.get();
 	}
+
+	@Override
+	public List<t_batch> findByBatch_org_name(String orgName) {
+		// TODO Auto-generated method stub
+		return batchRepo.findByBatchOrgName(orgName);
+	}
 		
 			/*
 	 * @Override public int deleteByBatch_id(Long batch_id) { // TODO Auto-generated

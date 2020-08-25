@@ -118,5 +118,12 @@ public boolean existByIMEI(Long imei) {
 }
 
 
+@Override
+public List<t_batch_details_log> get_t_batch_detailsBy_IMEI_AND_BATCH(Long iMEI, Long batchid) {
+	// TODO Auto-generated method stub
+	return logRepo.getAllByIMEIandBatchid(iMEI,batchid);
+}
+
+
 
 }

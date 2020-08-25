@@ -22,6 +22,8 @@ public interface BatchServiceApi {
 
 	public t_batch findByBatchid(Long batch_id);
 
+	public List<t_batch> findByBatch_org_name(String orgName);
+
 
 
 	//public int deleteByBatch_id(Long batch_id);

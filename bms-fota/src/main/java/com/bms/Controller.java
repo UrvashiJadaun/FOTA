@@ -39,10 +39,12 @@ import com.bms.model.CustomResponse;
 import com.bms.model.LogStatus;
 import com.bms.model.Version;
 import com.bms.model.Versionn;
+import com.bms.model.t_FirmwareGenerator;
 import com.bms.model.t_batch;
 import com.bms.model.t_batch_details;
 import com.bms.model.t_batch_details_log;
 import com.bms.model.t_commands;
+import com.bms.model.t_topicGenerator;
 import com.bms.mqtt.publisher.Publisher;
 import com.bms.repo.Batch_detailsRepo;
 import com.bms.repo.Batch_details_logRepo;
@@ -51,7 +53,9 @@ import com.bms.service.BatchDetailsLogServiceApi;
 import com.bms.service.BatchDetailsServiceApi;
 import com.bms.service.BatchServiceApi;
 import com.bms.service.CommandsServiceAPI;
+import com.bms.service.FirmwareServiceAPI;
 import com.bms.service.OrganizationServiceAPI;
+import com.bms.service.TopicGeneratorServiceAPI;
 import com.google.gson.Gson;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
@@ -62,6 +66,10 @@ import com.opencsv.exceptions.CsvValidationException;
 @CrossOrigin(origins = "*")
 public class Controller {
   
+	@Autowired
+	TopicGeneratorServiceAPI topicGeneratorServiceAPI;
+	@Autowired
+	FirmwareServiceAPI firmwareServiceAPI;
 	@Autowired
 	Publisher publish;
 	@Autowired
@@ -1729,10 +1737,47 @@ public class Controller {
 			obj.setBin(assetEntity.getBin());
 			list2.add(obj);
 		} 
-		
-		
 		return list2;
 	}
+//updated
+	@RequestMapping("/get_asset_data_/{OrgId}")
+	public List<AssetDataSelected> getAssetDataByOrgId_(@PathVariable(name = "OrgId") Integer OrgId)
+	{
+		List<AssetEntity> list1			=	assetsServiceAPI.getAssetDataByOrgId(OrgId);
+		List<AssetDataSelected> list2	=	new ArrayList<AssetDataSelected>();
+		String orgName = organizationServiceAPI.findById(OrgId);
+		List<t_batch> t_batchList 		=	batchServiceApi.findByBatch_org_name(orgName);
+		System.out.println("t_batchList :: "+t_batchList);
+		for (t_batch t_batch : t_batchList) {
+			System.out.println(t_batch.getBatch_org_name());
+		}
+		
+		for (AssetEntity assetEntity : list1) {
+			if(batchDetailsServiceApi.checkIMEI_IN_ASEET(assetEntity,t_batchList)) {
+			AssetDataSelected obj		=	new AssetDataSelected();
+			obj.setBms(assetEntity.getBms());
+			obj.setBmsConfigurationVersion(assetEntity.getBmsConfigurationVersion());
+			obj.setTcu(assetEntity.getTcu());
+			obj.setImeiNo(assetEntity.getImeiNo());
+			obj.setBin(assetEntity.getBin());
+			list2.add(obj);
+			}
+		} 
+		return list2;
+	}
+
+	
+	public boolean checkIMEI(AssetEntity assetEntity, List<t_batch> t_batchList) {
+		for (t_batch t_batch : t_batchList) {
+			List<t_batch_details> batchDetailsList=batchDetailsServiceApi.findAllByBatch_id(t_batch.getBatch_id());
+			for (t_batch_details t_batchDetails : batchDetailsList) {
+				if(t_batchDetails.getIMEI()==assetEntity.getImeiNo())
+					return false;
+			}
+		}
+		return true;
+     	
+}
 
 	@RequestMapping("/get_distinct_version/{componentType}")
 	public List<String> get_distinct_version_of_componentType(@PathVariable(name = "componentType") int componentType) {
@@ -1751,6 +1796,14 @@ public class Controller {
 	@GetMapping("/get_t_batch_details_log_By_IMEI_orderByDate/{IMEI}")
 	public List<t_batch_details_log> get_t_batch_details_logByIMEI(@PathVariable(name = "IMEI") Long IMEI) {
 		return batchDetailsLogServiceApi.get_t_batch_details_logByIMEI(IMEI);
+
+	}
+	
+	//order by date by imei and batchid
+	@GetMapping("/get_t_batch_details_log_By_IMEI_AND_BATCH_orderByDate/{IMEI}/{batchid}")
+	public List<t_batch_details_log> get_t_batch_details_logBy_IMEI_AND_BATCH(@PathVariable(name = "IMEI") Long IMEI,@PathVariable(name = "batchid") Long batchid) {
+		
+		return batchDetailsLogServiceApi.get_t_batch_detailsBy_IMEI_AND_BATCH(IMEI,batchid);
 
 	}
 	
@@ -1886,7 +1939,63 @@ public class Controller {
 			
 		  }
 		 
-	 
+// CREATE FIRMWARE		  
+	      @PostMapping("createFirmware/{clientname}/{firmwaretype}/{firmwareversion}/{firmwarenomenclature}")
+		  public ResponseEntity<CustomResponse> createFirmware(
+				  @PathVariable("clientname") String clientname,
+				  @PathVariable("firmwaretype") String firmwaretype,
+				  @PathVariable("firmwareversion") String firmwareversion,
+				  @PathVariable("firmwarenomenclature") String firmwarenomenclature					  
+				  )
+		  {
+	    	     t_FirmwareGenerator firmware	=	new t_FirmwareGenerator();
+	    	     firmware.setClientname(clientname);
+	    	     firmware.setFirmwaretype(firmwaretype);
+	    	     firmware.setFirmwareversion(firmwareversion);
+	    	     firmware.setFirmwarenomenclature(firmwarenomenclature);
+	    	     firmwareServiceAPI.createFirmware(firmware);
+	    	     return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(200,"success"));			  
+		  }
+// DISPLAY FIRMWARE
+	      @GetMapping("displayFirmware")
+		  public List<t_FirmwareGenerator> createFirmware()
+		  {
+	    	    return  firmwareServiceAPI.displayFirmware();
+		  }
+// CREATE TOPIC		  
+	      @PostMapping("createTopic/{clientname}/{componenttype}/{messagingtype}/{imei}/{topicnomenclature}/{description}")
+		  public ResponseEntity<CustomResponse> createTopic(
+				  @PathVariable("clientname") String clientname,
+				  @PathVariable("componenttype") String componenttype,
+				  @PathVariable("messagingtype") String messagingtype,
+				  @PathVariable("imei") String imei,
+				  @PathVariable("topicnomenclature") String topicnomenclature,
+				  @PathVariable("description") String description
+				  )
+		  {
+	    	  String topicname	=	messagingtype+"/exicom/"+clientname+"/"+componenttype+"/"+imei;
+	    	  System.out.println("generated topic :: "+topicname);
+	    	   t_topicGenerator topicGenerator	=	new t_topicGenerator();
+	    	   topicGenerator.setClientname(clientname);
+	    	   topicGenerator.setComponenttype(componenttype);
+	    	   topicGenerator.setMessagingtype(messagingtype);
+	    	   topicGenerator.setImei(imei);
+	    	   topicGenerator.setTopicname(topicname);
+	    	   topicGenerator.setTopicnomenclature(topicnomenclature);
+	    	   topicGenerator.setDescription(description);
+	    	   topicGeneratorServiceAPI.createTopic(topicGenerator);
+	    	   
+	    	     return ResponseEntity.status(HttpStatus.OK).body(new CustomResponse(200,"success"));			  
+		  }
+// DISPLAY TOPICS
+	      @GetMapping("displayTopics")
+		  public List<t_topicGenerator> displayTopics()
+		  {
+	    	    return  topicGeneratorServiceAPI.displayFirmware();
+		  }
+		  
+		  
+	      
 	 
 //	  @RequestMapping(value = "findOrgByToken")
 //		public Optional<OrganisationEntity> getOrgDetailByToken(@RequestHeader("Authorization") String accessToken) {

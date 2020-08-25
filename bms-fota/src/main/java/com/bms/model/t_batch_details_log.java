@@ -35,6 +35,16 @@ public class t_batch_details_log {
 	
 	private String response;
 	
+	private String betteryStataus;
+	
+	public String getBetteryStataus() {
+		return betteryStataus;
+	}
+
+	public void setBetteryStataus(String betteryStataus) {
+		this.betteryStataus = betteryStataus;
+	}
+
 	public String getTopic() {
 		return topic;
 	}

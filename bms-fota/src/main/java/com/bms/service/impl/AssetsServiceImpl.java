@@ -13,6 +13,8 @@ import org.springframework.data.domain.Sort;*/
 import org.springframework.stereotype.Service;
 
 import com.bms.Entity.AssetEntity;
+import com.bms.model.t_batch;
+import com.bms.model.t_batch_details;
 import com.bms.repo.AssetRepo;
 
 import com.bms.service.AssetsServiceAPI;
@@ -100,6 +102,10 @@ public class AssetsServiceImpl implements AssetsServiceAPI {
 		return assetRepo.findByOrgId(orgId);
 		
 	}
+
+	
+	
+	
 
 	/*
 	 * @Override public List<AssetEntity> findAllAssets() {
